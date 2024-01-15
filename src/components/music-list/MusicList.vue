@@ -1,20 +1,44 @@
-<script setup></script>
+<script setup>
+import { computed } from 'vue';
+import { useStore } from 'vuex';
+
+defineProps({
+  songs: Array
+})
+const duration = computed(() => {
+  return (dt) => {
+    const minute = parseInt(dt / 1000 / 60).toString().padStart(2, 0)
+    const seconds = (parseInt(dt / 1000) % 60).toString().padStart(2, 0);
+    return minute + ':' + seconds
+  }
+})
+const store = useStore()
+const playingNow = computed(() => store.state.home.playing)
+const playingMusic = (song) => {
+  store.commit('home/setPlaying', {
+    id: song.id,
+    name: song.name,
+    album: song.ar[0].name,
+    duration: song.dt,
+  })
+}
+</script>
 <template>
   <ul>
-    <li>
+    <li v-for="song in songs" :key="song.id" @click="playingMusic(song)">
       <div class="p-list-item">
         <div class="icon">
-          <div class="playicn"></div>
+          <div v-if="playingNow.id === song.id" class="playicn"></div>
         </div>
-        <div class="title">最后三件往事 Part 1</div>
+        <div class="title">{{ song.name }}</div>
         <div class="tools">
           <div class="collect"></div>
           <div class="share"></div>
           <div class="download"></div>
           <div class="del"></div>
         </div>
-        <div class="album">小霞</div>
-        <div class="duration">01:18</div>
+        <div class="album">{{ song.ar[0].name }}</div>
+        <div class="duration">{{ duration(song.dt) }}</div>
         <div class="link">
           <a class="to-album" href="#"></a>
         </div>

@@ -1,5 +1,5 @@
 import { getBanner, getHotRecommend } from "@/services/recommend";
-import { getAlbumNewest } from "@/services/home";
+import { getAlbumInfo, getAlbumNewest } from "@/services/home";
 
 const store = {
   namespaced: true,
@@ -9,7 +9,9 @@ const store = {
       banners: [],
       hotRecommends: [],
       albumNewest: [],
-      playList:[]
+      playList:[],
+      playingAlbum: null,
+      playing: null
     }
   },
   mutations: {
@@ -25,6 +27,15 @@ const store = {
     },
     setAlbumNewest(state, payload) {
       state.albumNewest = payload
+    },
+    addPlayList(state, payload) {
+      state.playList = payload
+    },
+    setPlaying(state, payload) {
+      state.playing = payload
+    },
+    setPlayingAlbum(state, payload) {
+      state.playingAlbum = payload
     }
   },
   getters: {
@@ -49,6 +60,26 @@ const store = {
       getAlbumNewest().then(response => {
         commit('setAlbumNewest', response.albums)
       })
+    },
+    addPlayList({commit}, albumId) {
+      commit('setPlaying', null)
+      getAlbumInfo(albumId).then(response => {
+        console.log(response)
+        commit('addPlayList', response.songs)
+        commit('setPlayingAlbum', response.album)
+        if (response.songs[0]) {
+          const firstMusic = response.songs[0]
+          commit('setPlaying', {
+            id: firstMusic.id,
+            name: firstMusic.name,
+            album: firstMusic.ar[0].name,
+            duration: firstMusic.dt
+          })
+        }
+      })
+    },
+    setPlaying({commit}, payload) {
+      commit('setPlaying', payload)
     }
   }
 }

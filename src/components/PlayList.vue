@@ -1,5 +1,7 @@
 <script setup>
 import MusicList from '@/components/music-list/MusicList.vue'
+import { computed } from 'vue';
+import { useStore } from 'vuex';
 
 defineProps({
   isShowPlayList: Boolean
@@ -9,13 +11,16 @@ const emit = defineEmits()
 const closePlayList = () => {
   emit('changeShowPlayList', false)
 }
+const store = useStore()
+const playList = computed(() => store.state.home.playList)
+const playingNow = computed(() => store.state.home.playing)
 </script>
 <template>
   <div v-if="isShowPlayList" class="play-list">
     <div class="container">
       <div class="header">
         <div class="header-left">
-          <h4 class="title">播放列表(13)</h4>
+          <h4 class="title">播放列表({{ playList?.length }})</h4>
           <div class="tools">
             <div class="collect hover">
               <span class="icon"></span>
@@ -29,14 +34,14 @@ const closePlayList = () => {
           </div>
         </div>
         <div class="header-right">
-          <div class="haowai">号外</div>
+          <div class="haowai">{{ playingNow?.name }}</div>
           <div class="close" @click="closePlayList"></div>
         </div>
       </div>
       <div class="list-content">
         <div class="content-left">
           <el-scrollbar class="el-scrollbar" height="260px" always>
-            <music-list></music-list>
+            <music-list :songs="playList"></music-list>
           </el-scrollbar>
           <div class="scrollbar-placeholder"></div>
         </div>

@@ -1,6 +1,8 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import PlayList from '@/components/PlayList.vue'
+import { useStore } from 'vuex';
+import defaultAlbum from '@/assets/images/default_album.jpg'
 
 const playing = ref(false)
 const processing = ref(0)
@@ -10,10 +12,25 @@ const maxVolume = ref(1)
 const audio = ref(null)
 const vedio = ref(null)
 const isShowAdjust = ref(false)
-const duration = ref(437551)//毫秒
 const isShowPlayList = ref(false)
 const preMusic = () => {
-  console.log("first")
+  console.log("上一首")
+  playList.value.filter(music => music.id === playingNow.id)
+  let pre = playList.value.reduce((prev, music, index) => {
+    if (music.id === playingNow.value.id) {
+      prev = index - 1
+    }
+    return prev
+  }, 0)
+  if (pre >= 0) {
+    const nextMusic = playList.value[pre]
+    store.commit('home/setPlaying', {
+      id: nextMusic.id,
+      name: nextMusic.name,
+      album: nextMusic.ar[0].name,
+      duration: nextMusic.dt
+    })
+  }
 }
 //播放音乐
 const playMusic = () => {
@@ -26,12 +43,33 @@ const playMusic = () => {
   }
 }
 const nextMusic = () => {
-  console.log("first")
+  console.log("下一首")
+  playList.value.filter(music => music.id === playingNow.id)
+  let next = playList.value.reduce((prev, music, index) => {
+    if (music.id === playingNow.value.id) {
+      prev = index + 1
+    }
+    return prev
+  }, 0)
+  if (next >= playList.value.length) {
+    next = 0
+  }
+  const nextMusic = playList.value[next]
+  store.commit('home/setPlaying', {
+    id: nextMusic.id,
+    name: nextMusic.name,
+    album: nextMusic.ar[0].name,
+    duration: nextMusic.dt
+  })
 }
+const playNowMinute = ref('00')
+const playNowSeconds = ref('00')
 //更新进度条
 const playUpdate = () => {
   processing.value = audio.value.currentTime / audio.value.duration * 100
   // console.log(audio.value.currentTime)
+  playNowMinute.value = parseInt(audio.value.currentTime / 60).toString().padStart(2, '0')
+  playNowSeconds.value = (parseInt(audio.value.currentTime) % 60).toString().padStart(2, '0')
 }
 //改变进度条
 const changeMusic = (event) => {
@@ -46,7 +84,9 @@ const changeMusicFinish = () => {
   playMusic()
 }
 const playEnd = () => {
+  console.log("播放结束")
   processing.value = 0
+  nextMusic()
 }
 const changeVolume = (level) => {
   audio.value.volume = level
@@ -58,6 +98,32 @@ const pictureInPicture = (event) => {
 const changeShowPlayList = (closeStatus) => {
   isShowPlayList.value = closeStatus
 }
+const store = useStore()
+const playList = computed(() => store.state.home.playList)
+const playingAlbum = computed(() => {
+  if (store.state.home.playingAlbum && store.state.home.playingAlbum.picUrl) {
+    return store.state.home.playingAlbum.picUrl + '?param=34y34'
+  } else {
+    return defaultAlbum
+  }
+})
+const playingNow = computed(() => store.state.home.playing)
+const playingDuration = computed(() => {
+  if (playingNow.value && playingNow.value.duration) {
+    const m = parseInt(playingNow.value.duration / 1000 / 60).toString().padStart(2, '0')
+    const s = parseInt(playingNow.value.duration / 1000) % 60
+    return m + ':' + s
+  } else {
+    return '00:00'
+  }
+})
+watch(playingNow, () => {
+  playing.value = false
+  playMusic()
+}, {
+  flush: 'post'
+})
+const playingUrl = computed(() => playingNow.value && 'https://music.163.com/song/media/outer/url?id=' + playingNow.value.id)
 </script>
 <template>
   <div class="play-music">
@@ -68,19 +134,19 @@ const changeShowPlayList = (closeStatus) => {
         <a href="javascript:;" class="next" @click="nextMusic"></a>
       </div>
       <div class="music-thumb">
-        <img class="thumb-img" src="https://p2.music.126.net/noitk3XANlawvlARis_opA==/109951169143352092.jpg?param=34y34"
+        <img class="thumb-img" :src="playingAlbum"
           alt="">
       </div>
       <div class="play">
         <div class="music-title">
           <div class="title">
-            <a class="title-link" href="javascript:;">最后三件事</a>
+            <a class="title-link" href="javascript:;">{{ playingNow?.name }}</a>
           </div>
           <div class="author">
-            <a class="author-link" href="">小霞</a>
+            <a class="author-link" href="">{{ playingNow?.album }}</a>
           </div>
           <div class="link">
-            <a class="link-link" href=""></a>
+            <a v-if="playingNow?.name" class="link-link" href=""></a>
           </div>
         </div>
         <div class="processing">
@@ -89,9 +155,9 @@ const changeShowPlayList = (closeStatus) => {
               :show-tooltip="false" />
           </div>
           <div class="processing-time">
-            <span class="play-now-time">00:00</span>
+            <span class="play-now-time">{{ playNowMinute }}:{{ playNowSeconds }}</span>
             <span class="time-split">/</span>
-            <span>00:00</span>
+            <span>{{ playingDuration }}</span>
           </div>
         </div>
       </div>
@@ -111,13 +177,13 @@ const changeShowPlayList = (closeStatus) => {
           </div>
           <div class="loop"></div>
           <div class="play-list" @click="() => isShowPlayList = isShowPlayList ? false : true ">
-            <div class="play-list-count">50</div>
+            <div class="play-list-count">{{ playList.length }}</div>
           </div>
         </div>
       </div>
     </div>
   </div>
-  <audio ref="audio" src="https://music.163.com/song/media/outer/url?id=2106374685.mp3" @timeupdate="playUpdate"
+  <audio ref="audio" :src="playingUrl" @timeupdate="playUpdate"
     @ended="playEnd" />
   <play-list :isShowPlayList = "isShowPlayList" @changeShowPlayList="changeShowPlayList"></play-list>
 </template>
@@ -192,6 +258,8 @@ const changeShowPlayList = (closeStatus) => {
       .thumb-img {
         margin-top: 12px;
         border-radius: 4px;
+        width: 34px;
+        height: 34px;
       }
     }
 
@@ -204,6 +272,7 @@ const changeShowPlayList = (closeStatus) => {
         gap: 20px;
         margin-top: 10px;
         margin-bottom: 3px;
+        height: 15px;
 
         .title {
           line-height: 12px;

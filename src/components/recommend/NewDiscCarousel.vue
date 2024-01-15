@@ -12,9 +12,7 @@ onMounted(() => {
   store.dispatch('home/getAlbumNewest')
 })
 const addPlayList = (albumId) => {
-  getAlbumInfo(albumId).then(res => {
-    console.log(res)
-  })
+  store.dispatch('home/addPlayList', albumId)
 }
 </script>
 
